@@ -303,17 +303,28 @@ def login(req):
             token = token.decode('utf-8')
 
         # Return a redirect and set cookie
-        # response = redirect('/home/')
-        return JsonResponse({"success": True})
+        response = redirect('/home/')  #at 10:08 PM
+        # return JsonResponse({"success": True})
+        # response.set_cookie(
+        #     key='my_cookie',
+        #     value=token,
+        #     httponly=True,   # True is preferred; browser still sends cookie
+        #     samesite='Lax',  # works for POST->redirect
+        #     secure=False,    # MUST be False for http://127.0.0.1:8000
+        #     path='/',
+        #     max_age=1800,
+        # )
+
         response.set_cookie(
-            key='my_cookie',
+            key="my_cookie",
             value=token,
-            httponly=True,   # True is preferred; browser still sends cookie
-            samesite='Lax',  # works for POST->redirect
-            secure=False,    # MUST be False for http://127.0.0.1:8000
-            path='/',
+            httponly=True,       # frontend cannot read; browser still sends it
+            samesite="None",     # REQUIRED for cross-site cookies
+            secure=True,         # REQUIRED on Render (HTTPS)
+            path="/",
             max_age=1800,
         )
+
 
         print("Issued JWT exp:", exp_time.isoformat())
         print("COOKIE SET:", response.cookies)  # debug print
