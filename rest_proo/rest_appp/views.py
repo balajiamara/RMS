@@ -262,8 +262,6 @@ def reg_user(req):
         print("reg_user exception:", repr(e))  # dev: print full exception
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
-
-
 @csrf_exempt
 def login(req):
     try:
@@ -281,11 +279,9 @@ def login(req):
         except Userss.DoesNotExist:
             return JsonResponse({'error': 'User Not Found'}, status=404)
 
-        # check password
         if not bcrypt.checkpw(pw.encode('utf-8'), user.Password.encode('utf-8')):
             return JsonResponse({'msg': 'Wrong userid or password'}, status=401)
 
-        # Build JWT using datetime objects (PyJWT will handle them)
         now = datetime.utcnow()
         exp_time = now + timedelta(minutes=30)
 
@@ -298,13 +294,38 @@ def login(req):
         }
 
         token = jwt.encode(payload, SECRETKEY, algorithm='HS256')
-        # PyJWT v1 returns bytes; v2 returns string — normalize to str
         if isinstance(token, bytes):
             token = token.decode('utf-8')
 
-        # Return a redirect and set cookie
-        response = redirect('/home/')  #at 10:08 PM
-        # return JsonResponse({"success": True})
+        # IMPORTANT: return JSON, no redirect
+        response = JsonResponse({
+            "success": True,
+            "msg": "Login successful",
+            "role": user.Role,
+            "userid": user.Userid
+        })
+
+        # FINAL cookie for Render + React
+        response.set_cookie(
+            key="my_cookie",
+            value=token,
+            httponly=True,
+            samesite="None",
+            secure=True,
+            path="/",
+            max_age=1800,
+        )
+
+        return response
+
+    except Exception as e:
+        print("Exception in login:", e)
+        traceback.print_exc()
+        return JsonResponse({"error": "Unexpected server error", "details": str(e)}, status=500)
+
+
+
+# return JsonResponse({"success": True})
         # response.set_cookie(
         #     key='my_cookie',
         #     value=token,
@@ -314,32 +335,6 @@ def login(req):
         #     path='/',
         #     max_age=1800,
         # )
-
-        response.set_cookie(
-            key="my_cookie",
-            value=token,
-            httponly=True,       # frontend cannot read; browser still sends it
-            samesite="None",     # REQUIRED for cross-site cookies
-            secure=True,         # REQUIRED on Render (HTTPS)
-            path="/",
-            max_age=1800,
-        )
-
-
-        print("Issued JWT exp:", exp_time.isoformat())
-        print("COOKIE SET:", response.cookies)  # debug print
-        return response
-
-    except jwt.ExpiredSignatureError:
-        # Shouldn't happen while creating token, but keep explicit
-        return JsonResponse({'error': 'Token creation error: expired signature'}, status=500)
-
-    except Exception as e:
-        # print full traceback to server console for debugging and return JSON error
-        print("Exception in login view:", repr(e))
-        traceback.print_exc()
-        return JsonResponse({'error': 'Unexpected server error in login', 'details': str(e)}, status=500)
-
 
 
 
