@@ -14,7 +14,8 @@ urlpatterns=[
     path('remove_user/<str:id>/',view=views.del_user),
     path('login_user/', view=views.login),
     path('promote_user/<str:id>/', views.promote_user, name='promote_user'),
-    path("modify_my_details/", views.modify_my_details, name="modify_my_details")
+    path("modify_my_details/", views.modify_my_details, name="modify_my_details"),
+    path('whoami/', views.whoami),
 
 ]
 
