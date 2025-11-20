@@ -303,7 +303,8 @@ def login(req):
             token = token.decode('utf-8')
 
         # Return a redirect and set cookie
-        response = redirect('/home/')
+        # response = redirect('/home/')
+        return JsonResponse({"success": True})
         response.set_cookie(
             key='my_cookie',
             value=token,
