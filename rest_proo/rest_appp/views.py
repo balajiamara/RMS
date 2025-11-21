@@ -17,11 +17,11 @@ import time
 import traceback
 from django.utils.html import escape
 from django.conf import settings
-SECRETKEY= settings.SECRET_KEY
+from django.db.models import Q                          #used in Django to write OR, AND, and complex filters inside your database queries.
 from django.core.mail import send_mail, EmailMessage
 # from django.core.mail import send_mail as django_send_mail, EmailMessage
 #Fix email sending (avoid name collision & reveal backend errors)
-
+SECRETKEY= settings.SECRET_KEY
 
 
 
@@ -51,17 +51,62 @@ from django.core.mail import send_mail, EmailMessage
 
 
 
+# @login_required
+# def get_dish(req):
+#     try:
+#         items = Menuu.objects.all()
+#         serializer = MenuSerializer(items, many=True)
+#         return JsonResponse({"menu": serializer.data}, status=200)
+#     except Exception as e:
+#         traceback.print_exc()
+#         return JsonResponse({"error": str(e)}, status=500)
+
+
+
+# from django.http import JsonResponse
+# from django.contrib.auth.decorators import login_required
+# from .models import Menuu
+# from .serializers import MenuSerializer
+# import traceback
+
 @login_required
 def get_dish(req):
     try:
+        # -----------------------------
+        # GET QUERY PARAMS
+        # -----------------------------
+        category = req.GET.get("category")            # /menu?category=veg
+        max_price = req.GET.get("max_price")          # /menu?max_price=200
+        min_price = req.GET.get("min_price")          # /menu?min_price=50
+        search = req.GET.get("search")                # /menu?search=chicken
+
+        # -----------------------------
+        # FILTER DATA
+        # -----------------------------
         items = Menuu.objects.all()
+
+        if category:
+            items = items.filter(Category__iexact=category)
+
+        if min_price:
+            items = items.filter(Price__gte=min_price)
+
+        if max_price:
+            items = items.filter(Price__lte=max_price)
+
+        if search:
+            items = items.filter(DishName__icontains=search)
+
+        # -----------------------------
+        # SERIALIZE AND RETURN
+        # -----------------------------
         serializer = MenuSerializer(items, many=True)
         return JsonResponse({"menu": serializer.data}, status=200)
+
     except Exception as e:
         traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=500)
-
-
+    
 
 
 
@@ -190,20 +235,78 @@ def del_dish(req,id):
 
     
 
+# @login_required
+# @admin_required
+# def get_users(req):
+#     users_data = list(Userss.objects.all().values())
+
+#     payload = req.user_payload  # from decorator
+#     logged_id = payload.get("userid")
+#     role = payload.get("role")
+
+#     return JsonResponse({"all_users":users_data})
+
+#     '''for templates'''
+#     # return render(req, 'show_userss.html', {
+#     #     'users': users_data,
+#     #     'logged_in_userid': logged_id,
+#     #     'role': role
+#     # })
+
 @login_required
 @admin_required
 def get_users(req):
-    users_data = list(Userss.objects.all().values())
+    try:
+        # -----------------------------------------
+        # QUERY PARAMS
+        # -----------------------------------------
+        role_filter = req.GET.get("role")           # /get_users?role=Admin
+        search = req.GET.get("search")              # /get_users?search=balaji
 
-    payload = req.user_payload  # from decorator
-    logged_id = payload.get("userid")
-    role = payload.get("role")
+        page = int(req.GET.get("page", 1))          # default 1
+        limit = int(req.GET.get("limit", 10))       # default 10
+        offset = (page - 1) * limit
 
-    return render(req, 'show_userss.html', {
-        'users': users_data,
-        'logged_in_userid': logged_id,
-        'role': role
-    })
+        # -----------------------------------------
+        # FETCH BASE QUERY
+        # -----------------------------------------
+        users = Userss.objects.all()
+
+        # -----------------------------------------
+        # FILTER BY ROLE
+        # -----------------------------------------
+        if role_filter:
+            users = users.filter(Role__iexact=role_filter)
+
+        # -----------------------------------------
+        # SEARCH (username or email)
+        # -----------------------------------------
+        if search:
+            users = users.filter(
+                Q(Username__icontains=search) |
+                Q(Email__icontains=search)
+            )
+
+        total_count = users.count()
+
+        # -----------------------------------------
+        # PAGINATION
+        # -----------------------------------------
+        users = users[offset: offset + limit]
+
+        # Convert queryset to list of dictionaries
+        users_data = list(users.values())
+
+        return JsonResponse({
+            "total": total_count,
+            "page": page,
+            "limit": limit,
+            "results": users_data
+        }, status=200)
+
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 
