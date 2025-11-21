@@ -581,3 +581,10 @@ def del_user(req, id):
         return JsonResponse({'msg': f'User {id} deleted successfully'})
     except Exception as e:
         return JsonResponse({'error': f'Unexpected error: {str(e)}'}, status=500)
+    
+
+
+
+
+def root_ok(request):
+    return JsonResponse({"ok": True, "service": "rms"}, status=200)

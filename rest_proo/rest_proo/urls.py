@@ -16,8 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
+from rest_appp.views import root_ok
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('',include('rest_appp.urls'))
+    path('',include('rest_appp.urls')),
+    path("", root_ok),
 ]
