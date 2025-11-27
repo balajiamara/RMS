@@ -69,7 +69,7 @@ SECRETKEY= settings.SECRET_KEY
 # from .serializers import MenuSerializer
 # import traceback
 
-@login_required
+# @login_required
 def get_dish(req):
     try:
         # -----------------------------
