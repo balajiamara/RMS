@@ -36,6 +36,7 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
 CORS_ALLOW_CREDENTIALS= True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://localhost:5174",
     "https://<your-react-domain>.vercel.app",
 ]
 CSRF_TRUSTED_ORIGINS = [
