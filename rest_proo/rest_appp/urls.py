@@ -22,7 +22,7 @@ urlpatterns=[
     path('add_to_cart/<str:id>/', views.add_to_cart, name='add_to_cart'),
     path('get_cart/', views.get_cart, name='get_cart'),
     path('place_order/', views.place_order, name='place_order'),
-    path('orders/', views.orders_page, name='orders_page')
+    # path('orders/', views.orders_page, name='orders_page')
 
 ]
 
