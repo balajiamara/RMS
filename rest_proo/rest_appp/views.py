@@ -586,31 +586,97 @@ def del_user(req, id):
 
 #Orders
 
+# @login_required
+# @csrf_exempt
+# def add_to_cart(req, id):
+#     cart = req.session.get("cart", [])
+#     cart.append(id)
+#     req.session["cart"] = cart
+#     print("ADD_TO_CART session cart:", req.session.get("cart"))  # DEBUG
+#     return JsonResponse({"msg": "Item added to cart"})
+
+
+# @login_required
+# def get_cart(req):
+#     cart = req.session.get("cart", [])
+#     dishes = Menuu.objects.filter(DishId__in=cart)
+#     data = list(dishes.values())
+#     return JsonResponse({"cart_items": data})
+
+# Orders
+
 @login_required
 @csrf_exempt
 def add_to_cart(req, id):
+    """
+    Add a dish ID to the session cart.
+    Store IDs as integers for reliable querying.
+    """
+    try:
+        id_int = int(id)
+    except ValueError:
+        return JsonResponse({"error": "Invalid dish id"}, status=400)
+
+    # Optional: ensure dish actually exists
+    if not Menuu.objects.filter(DishId=id_int).exists():
+        return JsonResponse({"error": "Dish not found"}, status=404)
+
     cart = req.session.get("cart", [])
-    cart.append(id)
-    req.session["cart"] = cart
+
+    # normalize existing stored ids to int
+    normalized_cart = []
+    for v in cart:
+        try:
+            normalized_cart.append(int(v))
+        except Exception:
+            continue
+
+    if id_int not in normalized_cart:
+        normalized_cart.append(id_int)
+
+    req.session["cart"] = normalized_cart
+    print("ADD_TO_CART session cart:", req.session.get("cart"))  # DEBUG
+
     return JsonResponse({"msg": "Item added to cart"})
 
 
 @login_required
 def get_cart(req):
+    """
+    Return all dishes currently in the session cart.
+    """
     cart = req.session.get("cart", [])
-    dishes = Menuu.objects.filter(DishId__in=cart)
+    print("GET_CART raw session cart:", cart)  # DEBUG
+
+    # ensure all IDs are integers
+    ids = []
+    for v in cart:
+        try:
+            ids.append(int(v))
+        except Exception:
+            continue
+
+    if not ids:
+        return JsonResponse({"cart_items": []})
+
+    dishes = Menuu.objects.filter(DishId__in=ids)
+    print("GET_CART dishes count:", dishes.count())  # DEBUG
+
     data = list(dishes.values())
     return JsonResponse({"cart_items": data})
+
 
 
 @login_required
 @csrf_exempt
 def place_order(req):
     cart = req.session.get("cart", [])
+    print("GET_CART session cart:", cart)  # DEBUG
     if not cart:
         return JsonResponse({"error": "Cart is empty"}, status=400)
 
     dishes = Menuu.objects.filter(DishId__in=cart)
+    print("GET_CART dishes count:", dishes.count())  # DEBUG
     total = sum(int(d.Price) for d in dishes)
 
     order_id = "ORD" + uuid.uuid4().hex[:8]
