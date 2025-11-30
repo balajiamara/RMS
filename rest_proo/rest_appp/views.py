@@ -608,16 +608,12 @@ def del_user(req, id):
 @login_required
 @csrf_exempt
 def add_to_cart(req, id):
-    """
-    Add a dish ID to the session cart.
-    Store IDs as integers for reliable querying.
-    """
     try:
         id_int = int(id)
     except ValueError:
         return JsonResponse({"error": "Invalid dish id"}, status=400)
 
-    # Optional: ensure dish actually exists
+    # Optional: ensure dish exists
     if not Menuu.objects.filter(DishId=id_int).exists():
         return JsonResponse({"error": "Dish not found"}, status=404)
 
@@ -642,13 +638,9 @@ def add_to_cart(req, id):
 
 @login_required
 def get_cart(req):
-    """
-    Return all dishes currently in the session cart.
-    """
     cart = req.session.get("cart", [])
     print("GET_CART raw session cart:", cart)  # DEBUG
 
-    # ensure all IDs are integers
     ids = []
     for v in cart:
         try:
