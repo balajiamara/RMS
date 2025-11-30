@@ -158,3 +158,19 @@ CLOUDINARY_STORAGE = {
 }
 
 
+# -------------------------------------------------------------------
+# SESSION COOKIE SETTINGS (important for cart to work with React)
+# -------------------------------------------------------------------
+
+SESSION_COOKIE_NAME = "sessionid"
+SESSION_COOKIE_HTTPONLY = True
+
+if DEBUG:
+    # Local dev: backend probably http://127.0.0.1:8000, frontend http://localhost:5173
+    # Allow cookies on cross-site fetch() from React
+    SESSION_COOKIE_SAMESITE = "None"
+    SESSION_COOKIE_SECURE = False   # must be False on plain http
+else:
+    # Production (Render over HTTPS)
+    SESSION_COOKIE_SAMESITE = "None"
+    SESSION_COOKIE_SECURE = True    # secure cookies only over https
