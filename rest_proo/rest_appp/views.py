@@ -6,7 +6,7 @@ from django.db import IntegrityError
 from .serializers import MenuSerializer, UserSerializer, validate_img
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from rest_framework import serializers
-from .models import Menuu, Userss, Orderss
+from .models import Menuu, Userss, Orderss, CartItem
 from datetime import datetime, timedelta
 import cloudinary.uploader
 from .auth_check import admin_required, login_required
@@ -605,84 +605,206 @@ def del_user(req, id):
 
 # Orders
 
+# @login_required
+# @csrf_exempt
+# def add_to_cart(req, id):
+#     try:
+#         id_int = int(id)
+#     except ValueError:
+#         return JsonResponse({"error": "Invalid dish id"}, status=400)
+
+#     # Optional: ensure dish exists
+#     if not Menuu.objects.filter(DishId=id_int).exists():
+#         return JsonResponse({"error": "Dish not found"}, status=404)
+
+#     cart = req.session.get("cart", [])
+
+#     # normalize existing stored ids to int
+#     normalized_cart = []
+#     for v in cart:
+#         try:
+#             normalized_cart.append(int(v))
+#         except Exception:
+#             continue
+
+#     if id_int not in normalized_cart:
+#         normalized_cart.append(id_int)
+
+#     req.session["cart"] = normalized_cart
+#     print("ADD_TO_CART session cart:", req.session.get("cart"))  # DEBUG
+
+#     return JsonResponse({"msg": "Item added to cart"})
+
+
+# @login_required
+# def get_cart(req):
+#     cart = req.session.get("cart", [])
+#     print("GET_CART raw session cart:", cart)  # DEBUG
+
+#     ids = []
+#     for v in cart:
+#         try:
+#             ids.append(int(v))
+#         except Exception:
+#             continue
+
+#     if not ids:
+#         return JsonResponse({"cart_items": []})
+
+#     dishes = Menuu.objects.filter(DishId__in=ids)
+#     print("GET_CART dishes count:", dishes.count())  # DEBUG
+
+#     data = list(dishes.values())
+#     return JsonResponse({"cart_items": data})
+
+
+
+# @login_required
+# @csrf_exempt
+# def place_order(req):
+#     cart = req.session.get("cart", [])
+#     print("GET_CART session cart:", cart)  # DEBUG
+#     if not cart:
+#         return JsonResponse({"error": "Cart is empty"}, status=400)
+
+#     dishes = Menuu.objects.filter(DishId__in=cart)
+#     print("GET_CART dishes count:", dishes.count())  # DEBUG
+#     total = sum(int(d.Price) for d in dishes)
+
+#     order_id = "ORD" + uuid.uuid4().hex[:8]
+#     delivery_time = datetime.now() + timedelta(minutes=30)
+
+#     order = Orderss.objects.create(
+#         OrderId=order_id,
+#         Userid=Userss.objects.get(Userid=req.user_payload["userid"]),
+#         Items=list(dishes.values()),
+#         TotalPrice=total,
+#         ExpectedDelivery=delivery_time
+#     )
+
+#     req.session["cart"] = []   # clear cart
+
+#     return JsonResponse({
+#         "msg": "Order Placed Successfully",
+#         "order_id": order.OrderId,
+#         "total_price": total,
+#         "expected_delivery": delivery_time.strftime("%I:%M %p"),
+#     })
+
+
+# Orders using DB instead of session
+
 @login_required
 @csrf_exempt
 def add_to_cart(req, id):
+    """
+    Add a dish to the cart for the current JWT user.
+    """
     try:
-        id_int = int(id)
+        dish_id = int(id)
     except ValueError:
         return JsonResponse({"error": "Invalid dish id"}, status=400)
 
-    # Optional: ensure dish exists
-    if not Menuu.objects.filter(DishId=id_int).exists():
+    try:
+        dish = Menuu.objects.get(DishId=dish_id)
+    except Menuu.DoesNotExist:
         return JsonResponse({"error": "Dish not found"}, status=404)
 
-    cart = req.session.get("cart", [])
+    userid = req.user_payload.get("userid")
+    try:
+        user = Userss.objects.get(Userid=userid)
+    except Userss.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
 
-    # normalize existing stored ids to int
-    normalized_cart = []
-    for v in cart:
-        try:
-            normalized_cart.append(int(v))
-        except Exception:
-            continue
-
-    if id_int not in normalized_cart:
-        normalized_cart.append(id_int)
-
-    req.session["cart"] = normalized_cart
-    print("ADD_TO_CART session cart:", req.session.get("cart"))  # DEBUG
+    item, created = CartItem.objects.get_or_create(
+        user=user,
+        dish=dish,
+        defaults={"quantity": 1},
+    )
+    if not created:
+        item.quantity += 1
+        item.save()
 
     return JsonResponse({"msg": "Item added to cart"})
 
 
 @login_required
 def get_cart(req):
-    cart = req.session.get("cart", [])
-    print("GET_CART raw session cart:", cart)  # DEBUG
-
-    ids = []
-    for v in cart:
-        try:
-            ids.append(int(v))
-        except Exception:
-            continue
-
-    if not ids:
+    """
+    Return all cart items for the current JWT user.
+    """
+    userid = req.user_payload.get("userid")
+    try:
+        user = Userss.objects.get(Userid=userid)
+    except Userss.DoesNotExist:
         return JsonResponse({"cart_items": []})
 
-    dishes = Menuu.objects.filter(DishId__in=ids)
-    print("GET_CART dishes count:", dishes.count())  # DEBUG
+    cart_items = CartItem.objects.filter(user=user).select_related("dish")
 
-    data = list(dishes.values())
+    data = []
+    for ci in cart_items:
+        d = ci.dish
+        data.append({
+            "DishId": d.DishId,
+            "DishName": d.DishName,
+            "Ingredients": d.Ingredients,
+            "Category": d.Category,
+            "Price": d.Price,
+            "Image": d.Image,
+            "quantity": ci.quantity,
+        })
+
     return JsonResponse({"cart_items": data})
-
 
 
 @login_required
 @csrf_exempt
 def place_order(req):
-    cart = req.session.get("cart", [])
-    print("GET_CART session cart:", cart)  # DEBUG
-    if not cart:
+    """
+    Create an order from the current user's cart items.
+    """
+    userid = req.user_payload.get("userid")
+    try:
+        user = Userss.objects.get(Userid=userid)
+    except Userss.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+
+    cart_items = CartItem.objects.filter(user=user).select_related("dish")
+
+    if not cart_items.exists():
         return JsonResponse({"error": "Cart is empty"}, status=400)
 
-    dishes = Menuu.objects.filter(DishId__in=cart)
-    print("GET_CART dishes count:", dishes.count())  # DEBUG
-    total = sum(int(d.Price) for d in dishes)
+    items_payload = []
+    total = 0.0
+
+    for ci in cart_items:
+        d = ci.dish
+        line_total = float(d.Price) * ci.quantity
+        total += line_total
+        items_payload.append({
+            "DishId": d.DishId,
+            "DishName": d.DishName,
+            "Ingredients": d.Ingredients,
+            "Category": d.Category,
+            "Price": d.Price,
+            "Image": d.Image,
+            "quantity": ci.quantity,
+            "line_total": line_total,
+        })
 
     order_id = "ORD" + uuid.uuid4().hex[:8]
     delivery_time = datetime.now() + timedelta(minutes=30)
 
     order = Orderss.objects.create(
         OrderId=order_id,
-        Userid=Userss.objects.get(Userid=req.user_payload["userid"]),
-        Items=list(dishes.values()),
+        Userid=user,
+        Items=items_payload,
         TotalPrice=total,
-        ExpectedDelivery=delivery_time
+        ExpectedDelivery=delivery_time,
     )
 
-    req.session["cart"] = []   # clear cart
+    # clear the cart
+    cart_items.delete()
 
     return JsonResponse({
         "msg": "Order Placed Successfully",
@@ -690,6 +812,7 @@ def place_order(req):
         "total_price": total,
         "expected_delivery": delivery_time.strftime("%I:%M %p"),
     })
+
 
 
 

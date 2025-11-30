@@ -24,3 +24,9 @@ class Orderss(models.Model):
     Status = models.CharField(max_length=20, default="Confirmed")
     OrderedTime = models.DateTimeField(auto_now_add=True)
     ExpectedDelivery = models.DateTimeField()
+
+# NEW
+class CartItem(models.Model):
+    user = models.ForeignKey(Userss, on_delete=models.CASCADE)
+    dish = models.ForeignKey(Menuu, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
