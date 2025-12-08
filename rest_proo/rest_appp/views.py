@@ -317,19 +317,18 @@ def reg_user(req):
         return JsonResponse({'error': 'Only POST allowed'}, status=405)
 
     try:
-        id = req.POST.get('Userid')
         name = req.POST.get('Username')
         email = req.POST.get('Email')
         pw = req.POST.get('Password')
 
-        if not all([id, name, email, pw]):
+        if not all([name, email, pw]):
             return JsonResponse({'error': 'All fields are required'}, status=400)
 
         # if Userid is integer in your model convert it, else keep as string
-        try:
-            id_val = int(id)
-        except Exception:
-            id_val = id
+        # try:
+        #     id_val = int(id)
+        # except Exception:
+        #     id_val = id
 
         encrypted_password = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(14)).decode('utf-8')
 
@@ -343,7 +342,7 @@ def reg_user(req):
         user_role = 'Admin' if not admin_exists else 'User'
 
         new_user = Userss.objects.create(
-            Userid=id_val,
+            # Userid=id_val,
             Username=name,
             Email=email,
             Password=encrypted_password,
@@ -385,19 +384,20 @@ def login(req):
         if req.method != 'POST':
             return JsonResponse({'error': 'Only POST allowed'}, status=405)
 
-        id = req.POST.get('Userid')
+        # id = req.POST.get('Userid')
+        email = req.POST.get('Email')
         pw = req.POST.get('Password')
 
-        if not all([id, pw]):
-            return JsonResponse({'error': 'Userid and Password required'}, status=400)
+        if not all([email, pw]):
+            return JsonResponse({'error': 'Email and Password required'}, status=400)
 
         try:
-            user = Userss.objects.get(Userid=id)
+            user = Userss.objects.get(Email=email)
         except Userss.DoesNotExist:
             return JsonResponse({'error': 'User Not Found'}, status=404)
 
         if not bcrypt.checkpw(pw.encode('utf-8'), user.Password.encode('utf-8')):
-            return JsonResponse({'msg': 'Wrong userid or password'}, status=401)
+            return JsonResponse({'msg': 'Wrong Email or password'}, status=401)
 
         now = datetime.utcnow()
         exp_time = now + timedelta(minutes=30)
@@ -419,7 +419,7 @@ def login(req):
             "success": True,
             "msg": "Login successful",
             "role": user.Role,
-            "userid": user.Userid
+            "Email": user.Email
         })
 
         # FINAL cookie for Render + React

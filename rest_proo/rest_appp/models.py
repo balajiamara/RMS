@@ -9,7 +9,7 @@ class Menuu(models.Model):
     Image=models.URLField()
 
 class Userss(models.Model):
-    Userid=models.IntegerField(primary_key=True)
+    Userid=models.AutoField(primary_key=True)
     Username=models.CharField(max_length=50)
     Email=models.EmailField(max_length=50,null=False,unique=True)
     Password=models.CharField(max_length=225,null=False)
