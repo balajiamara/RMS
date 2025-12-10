@@ -16,13 +16,4 @@ class Migration(migrations.Migration):
             name='Userid',
             field=models.AutoField(primary_key=True, serialize=False),
         ),
-        migrations.CreateModel(
-            name='CartItem',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('quantity', models.PositiveIntegerField(default=1)),
-                ('dish', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='rest_appp.menuu')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='rest_appp.userss')),
-            ],
-        ),
     ]
