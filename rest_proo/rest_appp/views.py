@@ -473,14 +473,22 @@ def login(req):
 
 
 
+@csrf_exempt
 @login_required
-def whoami(req):
-    payload = req.user_payload  # comes from login_required decorator
-    return JsonResponse({
-        'userid': payload.get('userid'),
-        'username': payload.get('username'),
-        'role': payload.get('role')
-    })
+def whoami(request):
+    payload = request.user_payload
+    user_id = payload.get("userid")
+
+    try:
+        user = Userss.objects.get(Userid=user_id)
+        return JsonResponse({
+            "userid": user.Userid,
+            "username": user.Username,  # fresh from DB
+            "email": user.Email,
+            "role": user.Role
+        })
+    except Userss.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
 
 
 
