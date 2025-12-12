@@ -312,6 +312,21 @@ def get_users(req):
         traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=500)
 
+@login_required
+def get_user(request, id):
+    if request.method != "GET":
+        return JsonResponse({"error": "GET only"}, status=405)
+
+    try:
+        user = Userss.objects.get(Userid=id)
+    except Userss.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+
+    return JsonResponse({
+        "Userid": user.Userid,
+        "Username": user.Username,
+        "Email": user.Email
+    })
 
 
 @csrf_exempt

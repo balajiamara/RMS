@@ -9,6 +9,7 @@ urlpatterns=[
 
     
     path('show_users/',view=views.get_users),
+    path('get_user/<str:id>/', views.get_user),
     path('auth/register/',view=views.reg_user),
     path('modify_user/<str:id>/',view=views.update_user),
     path('remove_user/<str:id>/',view=views.del_user),
