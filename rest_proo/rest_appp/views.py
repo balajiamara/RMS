@@ -485,51 +485,49 @@ def whoami(req):
 
 
 @csrf_exempt
-def update_user(req, id):
-    if req.method not in ['PUT', 'PATCH']:
-        return JsonResponse({'error': 'Only PUT/PATCH allowed'}, status=405)
+@login_required
+def modify_my_details(request):
+    if request.method not in ["POST", "PUT", "PATCH"]:
+        return JsonResponse({"error": "Only POST/PUT/PATCH allowed"}, status=405)
+
+    payload = request.user_payload
+    user_id = payload.get("userid")
 
     try:
-        user = Userss.objects.get(Userid=id)
+        user = Userss.objects.get(Userid=user_id)
     except Userss.DoesNotExist:
-        return JsonResponse({'error': 'User Not Found'}, status=404)
+        return JsonResponse({"error": "User not found"}, status=404)
 
-    # Parse multipart form-data manually
-    content_type = req.META.get('CONTENT_TYPE', '')
-    if 'multipart/form-data' in content_type:
-        upload_handlers = [TemporaryFileUploadHandler(req)]
-        parser = MultiPartParser(req.META, req, upload_handlers=upload_handlers)
-        data, files = parser.parse()
-    else:
-        return JsonResponse({'error': 'Expected multipart/form-data'}, status=400)
-
-    # Get updated fields
-    name = data.get('Username')
-    email = data.get('Email')
-    pw = data.get('Password')
+    data = request.POST
+    name = data.get("Username")
+    email = data.get("Email")
+    pw = data.get("Password")
 
     if name:
         user.Username = name
     if email:
         user.Email = email
     if pw:
-        user.Password = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(14)).decode('utf-8')
+        user.Password = bcrypt.hashpw(pw.encode("utf-8"), bcrypt.gensalt(14)).decode("utf-8")
 
     try:
         user.save()
+        # Return the updated user data along with the success message
         return JsonResponse({
-            'msg': 'User successfully updated',
-            'data': {
-                'Userid': user.Userid,
-                'Username': user.Username,
-                'Email': user.Email
+            "msg": "Your details were updated successfully",
+            "user": {
+                "userid": user.Userid,
+                "username": user.Username,
+                "email": user.Email,
+                "role": user.Role
             }
         })
     except IntegrityError:
-        return JsonResponse({'error': 'Email already in use'}, status=400)
+        return JsonResponse({"error": "Email already in use"}, status=400)
     except Exception as e:
-        return JsonResponse({'error': f'Unexpected error: {str(e)}'}, status=500)
-    
+        return JsonResponse({"error": str(e)}, status=500)
+
+
 
 @csrf_exempt
 @login_required
