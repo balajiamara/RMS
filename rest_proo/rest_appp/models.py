@@ -25,6 +25,9 @@ class Orderss(models.Model):
     OrderedTime = models.DateTimeField(auto_now_add=True)
     ExpectedDelivery = models.DateTimeField()
 
+    stripe_payment_intent_id = models.CharField(max_length=200, blank=True, null=True)
+    paid = models.BooleanField(default=False)
+
 # NEW
 class CartItem(models.Model):
     user = models.ForeignKey(Userss, on_delete=models.CASCADE)

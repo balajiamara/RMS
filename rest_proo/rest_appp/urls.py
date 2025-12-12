@@ -24,6 +24,11 @@ urlpatterns=[
     path('place_order/', views.place_order, name='place_order'),
     # path('orders/', views.orders_page, name='orders_page')
 
+
+    path('create-payment-intent/', views.create_payment_intent, name='create_payment_intent'),
+    path('stripe-webhook/', views.stripe_webhook, name='stripe_webhook'),
+    path("config/stripe-publishable-key/", views.stripe_config, name="stripe-config"),
+
 ]
 
 

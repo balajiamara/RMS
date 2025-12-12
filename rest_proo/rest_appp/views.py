@@ -20,9 +20,12 @@ from django.utils.html import escape
 from django.conf import settings
 from django.db.models import Q                          #used in Django to write OR, AND, and complex filters inside your database queries.
 from django.core.mail import send_mail, EmailMessage
+import stripe
+from django.views.decorators.http import require_POST
 # from django.core.mail import send_mail as django_send_mail, EmailMessage
 #Fix email sending (avoid name collision & reveal backend errors)
 SECRETKEY= settings.SECRET_KEY
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 
@@ -814,6 +817,112 @@ def place_order(req):
     })
 
 
+
+def stripe_config(request):
+    return JsonResponse({"publishableKey": settings.STRIPE_PUBLISHABLE_KEY})
+
+
+@csrf_exempt
+@login_required
+@require_POST
+def create_payment_intent(request):
+    """
+    POST JSON: { "order_id": "ORDxxxx" }
+    Returns: { clientSecret, order_id, status, intent_id }
+    """
+    try:
+        data = json.loads(request.body or "{}")
+        order_id = data.get("order_id")
+        if not order_id:
+            return JsonResponse({"error": "order_id required"}, status=400)
+
+        # fetch order
+        try:
+            order = Orderss.objects.get(OrderId=order_id)
+        except Orderss.DoesNotExist:
+            return JsonResponse({"error": "Order not found"}, status=404)
+
+        # ensure order belongs to requesting user
+        userid = request.user_payload.get("userid")
+        if order.Userid.Userid != userid:
+            return JsonResponse({"error": "Forbidden"}, status=403)
+
+        amount_paise = int(round(float(order.TotalPrice) * 100))
+
+        # If intent exists on order, retrieve it
+        intent = None
+        if getattr(order, "stripe_payment_intent_id", None):
+            try:
+                intent = stripe.PaymentIntent.retrieve(order.stripe_payment_intent_id)
+            except Exception:
+                intent = None
+
+        # otherwise create one
+        if not intent:
+            intent = stripe.PaymentIntent.create(
+                amount=amount_paise,
+                currency="inr",
+                automatic_payment_methods={"enabled": True},
+                metadata={"order_id": str(order.OrderId)}
+            )
+            # save id for later reference
+            order.stripe_payment_intent_id = intent.id
+            order.save(update_fields=["stripe_payment_intent_id"])
+
+        # Return client secret AND status + id so client can decide next action
+        return JsonResponse({
+            "clientSecret": intent.client_secret,
+            "order_id": order.OrderId,
+            "intent_id": intent.id,
+            "status": intent.status
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+    endpoint_secret = getattr(settings, "STRIPE_WEBHOOK_SECRET", None)
+    if not endpoint_secret:
+        # For safety: prefer CLI-provided secret in .env
+        return HttpResponse("Webhook secret not configured", status=500)
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except ValueError:
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError:
+        return HttpResponse(status=400)
+
+    # Handle events we're interested in
+    if event["type"] == "payment_intent.succeeded":
+        intent = event["data"]["object"]
+        order_id = intent.get("metadata", {}).get("order_id")
+        if order_id:
+            try:
+                order = Orderss.objects.get(OrderId=order_id)
+                order.paid = True
+                order.Status = "Paid"
+                order.save()
+            except Orderss.DoesNotExist:
+                pass
+
+    elif event["type"] == "payment_intent.payment_failed":
+        intent = event["data"]["object"]
+        order_id = intent.get("metadata", {}).get("order_id")
+        if order_id:
+            try:
+                order = Orderss.objects.get(OrderId=order_id)
+                order.Status = "Payment Failed"
+                order.save()
+            except Orderss.DoesNotExist:
+                pass
+
+    # Acknowledge receipt
+    return HttpResponse(status=200)
 
 
 def root_ok(request):
