@@ -30,6 +30,8 @@ urlpatterns=[
     path('stripe-webhook/', views.stripe_webhook, name='stripe_webhook'),
     path("config/stripe-publishable-key/", views.stripe_config, name="stripe-config"),
 
+    path("recommend/", views.recommend_food, name="ai-recommend-food"),
+
 ]
 
 

@@ -7,6 +7,8 @@ class Menuu(models.Model):
     Category=models.CharField(max_length=20)
     Price=models.FloatField()
     Image=models.URLField()
+    mood_tags = models.JSONField(default=list, blank=True)
+    food_tags = models.JSONField(default=list, blank=True)
 
 class Userss(models.Model):
     Userid=models.AutoField(primary_key=True)

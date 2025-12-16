@@ -12,12 +12,16 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import environ
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env=environ.Env()
 environ.Env.read_env()
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,7 +31,7 @@ environ.Env.read_env()
 SECRET_KEY = 'django-insecure-hx(%x=nyfo=@16bok%j0+76olr3yjtl)3_ge4zt)o=89h^-%)#'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False   #True
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
 

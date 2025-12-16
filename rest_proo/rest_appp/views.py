@@ -22,6 +22,12 @@ from django.db.models import Q                          #used in Django to write
 from django.core.mail import send_mail, EmailMessage
 import stripe
 from django.views.decorators.http import require_POST
+from rest_framework import status
+from .services import recommend_food_by_mood
+
+# from rest_framework.decorators import api_view
+# from rest_framework.response import Response
+
 # from django.core.mail import send_mail as django_send_mail, EmailMessage
 #Fix email sending (avoid name collision & reveal backend errors)
 SECRETKEY= settings.SECRET_KEY
@@ -992,5 +998,39 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 
+
+
+# @api_view(["POST"])
+@csrf_exempt
+def recommend_food(request):
+    if request.method != "POST":
+        return JsonResponse(
+            {"error": "Only POST method allowed"},
+            status=405
+        )
+
+    # ✅ Handle FORM DATA
+    mood = request.POST.get("mood")
+
+    if not mood:
+        return JsonResponse(
+            {"error": "Mood is required"},
+            status=400
+        )
+
+    # 🔥 Call AI service
+    ai_response = recommend_food_by_mood(mood)
+
+    return JsonResponse(
+        {
+            "mood": mood,
+            "recommendations": ai_response
+        },
+        safe=False
+    )
+
+
 def root_ok(request):
     return JsonResponse({"ok": True, "service": "rms"}, status=200)
+
+
