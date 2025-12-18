@@ -1001,33 +1001,106 @@ def stripe_webhook(request):
 
 
 # @api_view(["POST"])
+# @csrf_exempt
+# def recommend_food(request):
+#     if request.method != "POST":
+#         return JsonResponse(
+#             {"error": "Only POST method allowed"},
+#             status=405
+#         )
+
+#     # ✅ Handle FORM DATA
+#     mood = request.POST.get("mood")
+
+#     if not mood:
+#         return JsonResponse(
+#             {"error": "Mood is required"},
+#             status=400
+#         )
+
+#     # 🔥 Call AI service
+#     ai_response = recommend_food_by_mood(mood)
+
+#     return JsonResponse(
+#         {
+#             "mood": mood,
+#             "recommendations": ai_response
+#         },
+#         safe=False
+#     )
+
+
+# @csrf_exempt
+# def recommend_food(request):
+#     if request.method != "POST":
+#         return JsonResponse({"error": "Only POST allowed"}, status=405)
+
+#     mood = request.POST.get("mood")
+#     if not mood:
+#         return JsonResponse({"error": "Mood is required"}, status=400)
+
+#     # 1️⃣ Get dish IDs from AI
+#     dish_ids = recommend_food_by_mood(mood)
+
+#     # 2️⃣ Fetch FULL menu items
+#     dishes = Menuu.objects.filter(DishId__in=dish_ids)
+
+#     # 3️⃣ Serialize (same shape as Menu.jsx expects)
+#     data = []
+#     for d in dishes:
+#         data.append({
+#             "DishId": d.DishId,
+#             "DishName": d.DishName,
+#             "Ingredients": d.Ingredients,
+#             "Category": d.Category,
+#             "Price": d.Price,
+#             "Image": d.Image
+#         })
+
+#     return JsonResponse(
+#         {
+#             "mood": mood,
+#             "items": data
+#         }
+#     )
+
+
 @csrf_exempt
 def recommend_food(request):
     if request.method != "POST":
-        return JsonResponse(
-            {"error": "Only POST method allowed"},
-            status=405
-        )
+        return JsonResponse({"error": "POST only"}, status=405)
 
-    # ✅ Handle FORM DATA
     mood = request.POST.get("mood")
-
     if not mood:
-        return JsonResponse(
-            {"error": "Mood is required"},
-            status=400
+        return JsonResponse({"error": "Mood required"}, status=400)
+
+    ai_results = recommend_food_by_mood(mood)
+
+    dish_ids = [x["DishId"] for x in ai_results]
+
+    dishes = Menuu.objects.filter(DishId__in=dish_ids)
+
+    # attach reason to each dish
+    response_data = []
+    for dish in dishes:
+        reason = next(
+            (x["reason"] for x in ai_results if x["DishId"] == dish.DishId),
+            ""
         )
+        response_data.append({
+            "DishId": dish.DishId,
+            "DishName": dish.DishName,
+            "Ingredients": dish.Ingredients,
+            "Price": dish.Price,
+            "Image": dish.Image,
+            "reason": reason
+        })
 
-    # 🔥 Call AI service
-    ai_response = recommend_food_by_mood(mood)
+    return JsonResponse({
+        "mood": mood,
+        "items": response_data
+    })
 
-    return JsonResponse(
-        {
-            "mood": mood,
-            "recommendations": ai_response
-        },
-        safe=False
-    )
 
 
 def root_ok(request):
