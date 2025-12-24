@@ -245,20 +245,40 @@ def recommend_food_by_mood(mood):
         for i in items
     ]
 
+#     prompt = f"""
+# Return ONLY valid JSON ARRAY.
+# No explanation. No text.
+
+# Format:
+# [
+#   {{ "DishId": number, "reason": string }}
+# ]
+
+# Pick maximum 3 dishes.
+
+# Mood: {mood}
+# Menu: {menu_data}
+# """
+
+
     prompt = f"""
-Return ONLY valid JSON ARRAY.
-No explanation. No text.
+Return ONLY a valid JSON ARRAY.
+No explanation outside JSON. No extra text.
+
+For EACH dish in the Menu, generate a short friendly reason
+explaining why it matches the given mood.
 
 Format:
 [
   {{ "DishId": number, "reason": string }}
 ]
 
-Pick maximum 3 dishes.
-
 Mood: {mood}
-Menu: {menu_data}
+
+Menu:
+{menu_data}
 """
+
 
     try:
         response = client.chat.completions.create(
