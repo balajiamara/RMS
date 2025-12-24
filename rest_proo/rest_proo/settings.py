@@ -41,11 +41,11 @@ CORS_ALLOW_CREDENTIALS= True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5174",
-    "https://restaurantmanagementsystem-eta.vercel.app/",
+    "https://restaurantmanagementsystem-eta.vercel.app",
 ]
 CSRF_TRUSTED_ORIGINS = [
     "https://rms-i0wj.onrender.com",
-    "https://restaurantmanagementsystem-eta.vercel.app/",
+    "https://restaurantmanagementsystem-eta.vercel.app",
 ]
 
 
