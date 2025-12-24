@@ -1065,6 +1065,49 @@ def stripe_webhook(request):
 #     )
 
 
+# @csrf_exempt
+# def recommend_food(request):
+#     if request.method != "POST":
+#         return JsonResponse({"error": "POST only"}, status=405)
+
+#     mood = request.POST.get("mood")
+#     if not mood:
+#         return JsonResponse({"error": "Mood required"}, status=400)
+
+#     ai_results = recommend_food_by_mood(mood)
+
+#     dish_ids = [x["DishId"] for x in ai_results]
+
+#     dishes = Menuu.objects.filter(DishId__in=dish_ids)
+
+#     # attach reason to each dish
+#     response_data = []
+#     for dish in dishes:
+#         reason = next(
+#             (x["reason"] for x in ai_results if x["DishId"] == dish.DishId),
+#             ""
+#         )
+#         response_data.append({
+#             "DishId": dish.DishId,
+#             "DishName": dish.DishName,
+#             "Ingredients": dish.Ingredients,
+#             "Price": dish.Price,
+#             "Image": dish.Image,
+#             "reason": reason
+#         })
+
+#     return JsonResponse({
+#         "mood": mood,
+#         "items": response_data
+#     })
+
+
+# views.py
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .services import recommend_food_by_mood
+from rest_appp.models import Menuu
+
 @csrf_exempt
 def recommend_food(request):
     if request.method != "POST":
@@ -1076,11 +1119,13 @@ def recommend_food(request):
 
     ai_results = recommend_food_by_mood(mood)
 
+    if not ai_results:
+        return JsonResponse({"mood": mood, "items": []})
+
     dish_ids = [x["DishId"] for x in ai_results]
 
     dishes = Menuu.objects.filter(DishId__in=dish_ids)
 
-    # attach reason to each dish
     response_data = []
     for dish in dishes:
         reason = next(
@@ -1090,7 +1135,6 @@ def recommend_food(request):
         response_data.append({
             "DishId": dish.DishId,
             "DishName": dish.DishName,
-            "Ingredients": dish.Ingredients,
             "Price": dish.Price,
             "Image": dish.Image,
             "reason": reason
