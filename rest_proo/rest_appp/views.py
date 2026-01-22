@@ -450,7 +450,7 @@ def login(req):
         response.set_cookie(
             key="my_cookie",
             value=token,
-            httponly=True,
+            httponly=False,
             samesite="None",
             secure=True,
             path="/",
