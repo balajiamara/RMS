@@ -32,6 +32,8 @@ urlpatterns=[
 
     path("recommend/", views.recommend_food, name="ai-recommend-food"),
 
+    # Order History
+    path('my_orders/', views.get_user_orders, name='my_orders'),
 ]
 
 

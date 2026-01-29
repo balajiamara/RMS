@@ -450,7 +450,7 @@ def login(req):
         response.set_cookie(
             key="my_cookie",
             value=token,
-            httponly=False,
+            httponly=True,
             samesite="None",
             secure=True,
             path="/",
@@ -1151,3 +1151,36 @@ def root_ok(request):
     return JsonResponse({"ok": True, "service": "rms"}, status=200)
 
 
+@login_required
+def get_user_orders(req):
+    """
+    Return all orders for the authenticated user, ordered by most recent first.
+    """
+    if req.method != "GET":
+        return JsonResponse({"error": "GET only"}, status=405)
+
+    userid = req.user_payload.get("userid")
+    
+    try:
+        user = Userss.objects.get(Userid=userid)
+    except Userss.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+
+    orders = Orderss.objects.filter(Userid=user).order_by('-OrderedTime')
+
+    orders_data = []
+    for order in orders:
+        orders_data.append({
+            "OrderId": order.OrderId,
+            "Items": order.Items,
+            "TotalPrice": order.TotalPrice,
+            "Status": order.Status,
+            "OrderedTime": order.OrderedTime.strftime("%Y-%m-%d %H:%M"),
+            "ExpectedDelivery": order.ExpectedDelivery.strftime("%I:%M %p"),
+            "paid": order.paid,
+        })
+
+    return JsonResponse({
+        "orders": orders_data,
+        "total": len(orders_data)
+    })
