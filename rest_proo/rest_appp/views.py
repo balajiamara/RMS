@@ -89,6 +89,7 @@ def get_dish(req):
         max_price = req.GET.get("max_price")          # /menu?max_price=200
         min_price = req.GET.get("min_price")          # /menu?min_price=50
         search = req.GET.get("search")                # /menu?search=chicken
+        dish_type = req.GET.get("dish_type")          # /menu?dish_type=Veg
 
         # -----------------------------
         # FILTER DATA
@@ -97,6 +98,9 @@ def get_dish(req):
 
         if category:
             items = items.filter(Category__iexact=category)
+
+        if dish_type:
+            items = items.filter(DishType__iexact=dish_type)
 
         if min_price:
             items = items.filter(Price__gte=min_price)
@@ -144,6 +148,7 @@ def add_dish(req):
         'Ingredients': data.get('Ingredients'),
         'Price': data.get('Price'),
         'Category': data.get('Category'),
+        'DishType': data.get('DishType', 'Veg'),
     }
 
     # Handle optional image
@@ -199,6 +204,7 @@ def update_dish(req, id):
     ingre = data.get('Ingredients')
     price = data.get('Price')
     cat = data.get('Category')
+    dish_type = data.get('DishType')
     pic = files.get('Image')
 
     # Update fields if provided
@@ -210,6 +216,8 @@ def update_dish(req, id):
         menu.Price = price
     if cat:
         menu.Category = cat
+    if dish_type:
+        menu.DishType = dish_type
 
     # Handle image if provided
     if pic:
