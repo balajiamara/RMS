@@ -5,6 +5,7 @@ class Menuu(models.Model):
     DishName=models.CharField(max_length=50)
     Ingredients=models.TextField()
     Category=models.CharField(max_length=20)
+    DishType = models.CharField(max_length=10, default='Veg')
     Price=models.FloatField()
     Image=models.URLField()
     mood_tags = models.JSONField(default=list, blank=True)
